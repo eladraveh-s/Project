@@ -139,6 +139,15 @@ void freeMat(double **mat) {
     free(mat);
 }
 
+/*subtracts mat2 from mat1 (the result is in mat1, both of matrix are the same dimension [n]).*/
+void subtractMatrix(double ** mat1, double ** mat2, int n){
+    for (int i = 0; i < n; i++){
+        for (int j = 0;  j < n; j++){
+            mat1[i][j] = mat1[i][j] - mat2[i][j];
+        }
+    }
+}
+
 /******************
  * Kmeans Functions
  ******************/
@@ -281,4 +290,149 @@ double ** buildJacobiRet(double **vals, double **vectors, int dim) {
     for (; i < dim; i++) {jacobi[0][i] = vals[i][i];}
     copyMatFromTo(vectors, jacobi + 1, dim ,dim);
     return jacobi;
+}
+
+/******************
+ * wam, ddg, gl functions
+ ******************/
+
+/* gets two points (as lists of doubles - p1, p2), same dimension (d). returns their squared euclidean distance.*/
+double SquaredEuclideanDistance(double *p1, double *p2, int d){
+    double result = 0.0;
+    for (int i = 0 ; i < d; i ++){
+        result = result + (p1[i]-p2[i])**2;
+    }
+    return result;
+}
+
+/*gets a list of data points (dataPoints), the list length (n), and their dimension (d). clacs their weighted and returns it.*/
+double ** calcWeightedAdjencyMatrix(double ** dataPoints, int n ,int d){
+    double ** weightedMatrix = createMatrix(n, n);
+    for (int i = 0; i < n; i++){
+        for (int j = 0; j < n; j++){
+            if (i == j){
+                weightedMatrix[i][j] = 0.0;
+            }
+            else{
+                weightedMatrix[i][j] = exp(-0.5*(SquaredEuclideanDistance(dataPoints[i], dataPoints[j], d)));
+            }
+        }
+    }
+    return weightedMatrix;
+}
+
+/*gets the vertex's row from the weighted adjency matrix (vertexRow), and the number of data points (n). returns the vertex's degree as it define. */
+double findTheDegreeOfaVertex(double * vertexRow, int n){
+    double degree = 0.0;
+    for (int i; i < n; i++){
+        degree = degree + vertexRow[i];
+    }
+    return degree;
+}
+
+/*gets the weighted Adjency Matrix and the matrix dimension (n), returns te diagonal degree matrix as it describe.*/
+double ** calcDiagonalDegreeMatrix(double ** weightedAdjencyMatrix, int n){
+    double ** diagonalMatrix = createMatrix(n, n);
+    zeroMat(diagonalMatrix, n, n);
+    for (int i = 0; i < n; i++){
+        diagonalMatrix[i][i] = findTheDegreeOfaVertex(weightedAdjencyMatrix[i]);
+    }
+    return diagonalMatrix;
+}
+
+/*puts the Laplasian matrix in the diagonal matrix.*/
+void calcLaplasianMatrix(double ** weightedMatrix, double ** diagonalMatrix, int n){
+    subtractMatrix(diagonalMatrix, weightedMatrix, n);
+}
+
+/******************
+ * Python-C functions
+ ******************/
+
+/*converts PyObject matrix to matrix in C. [r],[c]: rows and columns number.*/
+double ** convertMatrixToC(PyObject * matrix, int r, int c){
+    if matrix == NULL{
+        return NULL;
+    }
+    double ** cMat = createMatrix(r, c);
+    double value;  
+    for (Py_ssize_t i = 0; i < r; ++i){
+        row = PyList_GetItem(matrix, i);
+        for (Py_ssize_t j = 0; j < pointLen; ++j) {
+            PyObject* node = PyList_GET_ITEM(row, j);
+            value = PyFloat_AsDouble(node);
+            cMat[i][j] = value;
+        }
+    }
+    return cMat;
+}
+
+/*
+converts list in C to list as PyObject.
+*/
+PyObject* convertListToPy(double cArray[], size_t size) {
+    PyObject *l = PyList_New(size);
+    size_t i;
+    for (Py_ssize_t i = 0; i != size; ++i) {
+        PyList_SET_ITEM(l, i, PyFloat_FromDouble(cArray[i]));
+    }
+    return l;
+}
+
+/*converts matrix in C to matrix as PyObject. frees the c matrix at the end.*/
+PyObject* convertMatrixToPy(double ** cMatrix, size_t r, size_t c){
+    pyObject* pyMatrix = PyList_New(r);
+    for (Py_ssize_t i = 0; i < r; i++){
+        PyList_SetItem(pyMatrix, i,  convertListToPy(cMatrix[i], c));
+    }
+
+    freeMat(cMatrix);
+    return pyMatrix;
+}
+
+/*returns the wanted matrix due to mode. 2- wam. 3 - ddg. 4 - gl.*/
+PyObject* getTheWantedMatrix(PyObject *self, PyObject *args, int mode){
+    int d;
+    int n;
+    PyObject* dataPointsInput;
+    PyObject* point;
+    if(!PyArg_ParseTuple(args, "O" ,&dataPointsInput)) {
+        return NULL;
+    }
+    if (!PyList_CheckExact(dataPointsInput)) {
+        PyErr_SetString(PyExc_RuntimeError, "Received non-list type object.");
+        return NULL;
+    }
+
+    n = PyList_GET_SIZE(dataPointsInput);
+    point = PyList_GetItem(dataPointsInput, 0);
+    d = PyList_GET_SIZE(point);
+
+    double ** dataPoints = convertMatrixToC(PyObject * dataPointsInput, int n, int d);
+    double ** weightMatrix = calcWeightedAdjencyMatrix(dataPoints, n , d);
+    freeMat(dataPoints);
+    if mode == 2 {
+        return convertMatrixToPy(weightMatrix, n, n);
+    }
+    double ** diagonalMatrix = calcDiagonalDegreeMatrix(weightMatrix, n);
+    freeMat(weightMatrix);
+    if mode == 3 {
+        return convertMatrixToPy(diagonalMatrix, n, n);
+    }
+    calcLaplasianMatrix(double ** weightedMatrix, double ** diagonalMatrix, int n);
+    if mode == 4 {
+        return convertMatrixToPy(diagonalMatrix, n, n);
+    }   
+}
+
+static PyObject* wam(PyObject *self, PyObject *args) {
+    return getTheWantedMatrix(PyObject *self, PyObject *args, 2);
+}
+
+static PyObject* ddg(PyObject *self, PyObject *args) {
+    return getTheWantedMatrix(PyObject *self, PyObject *args, 3);
+}
+
+static PyObject* gl(PyObject *self, PyObject *args) {
+    return getTheWantedMatrix(PyObject *self, PyObject *args, 4);
 }
