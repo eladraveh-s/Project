@@ -15,8 +15,20 @@ param path: the path of the points file.
 return: the processed points matrix.
 */
 double ** processFile(char *path) {
+    double *point, **points;
     FILE *file = fopen(path, "r");
-    double *point = processFirstLine(file), **points = createMatrix(10, NUMS_PER_POINT);
+    if (file == NULL) {return NULL;}
+    point = processFirstLine(file); 
+    if (point == NULL) {
+        fclose(file);
+        return NULL;
+    }
+    points = createMatrix(10, NUMS_PER_POINT);
+    if (points == NULL) {
+        free(point);
+        fclose(file);
+        return NULL;
+    }
     copyDoublePFromTo(point, points[0], NUMS_PER_POINT);
     points = processPoints(points, file);
     free(point);
@@ -30,17 +42,32 @@ param file: the pointer to the file object.
 return: double *point - the first point in the file.
 */
 double * processFirstLine(FILE *file) {
-    int size = 2, *indp = malloc(sizeof(int));
+    char *line;
+    int *indp, size = 2;
     double *point = (double *) malloc((size_t) (size * sizeof(double)));
-    char *line = getLine(file);
-    *indp = 0;
+    if (point == NULL) {return NULL;}
+    line = getLine(file);
     if (line == NULL) {
-        free(indp);
+        free(point);
         return NULL;
     }
+    indp = (int *) malloc(sizeof(int));
+    if (indp == NULL) {
+        free(point);
+        free(line);
+        return NULL;
+    }
+    *indp = 0;
     while (line[(*indp)] != '\0') {
         point[NUMS_PER_POINT++] = processNum(line, indp);
-        if (size == NUMS_PER_POINT) {point = (double *) realloc(point, (size_t) ((size *= 2) * sizeof(double)));}
+        if (size == NUMS_PER_POINT) {
+            point = (double *) realloc(point, (size_t) ((size *= 2) * sizeof(double)));
+            if (point == NULL) {
+                free(indp);
+                free(line);
+                return NULL;
+            }
+        }
         (*indp)++;
     }
     free(indp);
@@ -54,18 +81,28 @@ param file: the pointer to the file object.
 return: given char * of line.
 */
 char * getLine(FILE *file) {
-    char *line = (char *) malloc((size_t) (LINE_SIZE * sizeof(char)));
-    char *pointer;
-    int *indp = malloc(sizeof(int));
+    char *pointer, *line;
+    int *indp = (int *) malloc(sizeof(int));
+    if (indp == NULL) {return NULL;}
     *indp = 0;
+    line = (char *) malloc((size_t) (LINE_SIZE * sizeof(char)));
+    if (line == NULL) {
+        free(indp);
+        return NULL;
+    }
     pointer = fgets(line, LINE_SIZE, file);
     if (pointer == NULL) {
-        free(indp);
         free(line);
+        free(indp);
         return NULL;
     }
     while (!checkGotLine(line, indp)) {
         line = (char *) realloc(line, (size_t) ((LINE_SIZE * 2) * sizeof(char)));
+        if (line == NULL) {
+            free(pointer);
+            free(indp);
+            return NULL;
+        }
         enterAfter(line + *indp, file);
         LINE_SIZE *= 2;
     }
@@ -101,6 +138,7 @@ double processNum(char *line, int *indp) {
     int size = 8, i = 0, start = *indp;
     char *num_str = (char *) malloc((size_t) (size * sizeof(char)));
     double num;
+    /*if (num_str == NULL) {return NULL;}*/
     while (line[*indp] != ',' && line[*indp] != '\n') {
         num_str[i] = line[(*indp)++];
         if (size == ++i) {num_str = (char *) realloc(num_str, (size_t) ((size *= 2) * sizeof(char)));}
@@ -121,18 +159,18 @@ return: double ** matrix containing all of the points in the file.
 */
 double ** processPoints(double **points, FILE *file) {
     int length = 10;
-    double *cur_point;
-    while ((cur_point = processLine(file)) != NULL) {
+    double *curPoint;
+    while ((curPoint = processLine(file)) != NULL) {
         if (POINTS_NUM++ == length - 1) {
             points = doubleMatLength(points, length, NUMS_PER_POINT);
             if (points == NULL) {
-                freeMat(points);
+                free(curPoint);
                 return NULL;
             }
             length *= 2;
         }
-        copyDoublePFromTo(cur_point, points[POINTS_NUM], NUMS_PER_POINT);
-        free(cur_point);
+        copyDoublePFromTo(curPoint, points[POINTS_NUM], NUMS_PER_POINT);
+        free(curPoint);
     }
     POINTS_NUM++;
     return points;
@@ -144,15 +182,22 @@ param file: the pointer to the file object.
 return: double * point - a numerical represntation of the line.
 */
 double * processLine(FILE *file) {
-    double *point = (double *) malloc((size_t) (NUMS_PER_POINT * sizeof(double)));
-    int i = 0, *indp = (int *) malloc(sizeof(int));
+    double *point;
+    int *indp, i = 0;
     char *line = getLine(file);
-    *indp = 0;
-    if (line == NULL) {
-        free(indp);
+    if (line == NULL) {return NULL;}
+    point = (double *) malloc((size_t) (NUMS_PER_POINT * sizeof(double)));
+    if (point == NULL) {
+        free(line);
+        return NULL;
+    }
+    indp = (int *) malloc(sizeof(int));
+    if (indp == NULL) {
+        free(line);
         free(point);
         return NULL;
     }
+    *indp = 0;
     for (; i < NUMS_PER_POINT; i++) {
         point[i] = processNum(line, indp);
         (*indp)++;
@@ -163,21 +208,33 @@ double * processLine(FILE *file) {
 }
 
 int main(int argc, char *argv[]) {
-    double **points;
-    int *maxDim;
+    double **points, **mat, **helpMat;
     if (argc != 3) {
-        printf("The arguments given don't match the requierments");
+        printf("The arguments given don't match the requierments!\n");
+        return 0;
+    }
+    if (strcmp(argv[1], "jacobi") && strcmp(argv[1], "wam") && strcmp(argv[1], "ddg") && strcmp(argv[1], "gl")) {
+        printf("Invalid goal!\n");
         return 0;
     }
     points = processFile(argv[2]);
-    printMat(points, POINTS_NUM, NUMS_PER_POINT);
-    printf("\n");
-    printMat(transposeMat(points, POINTS_NUM, NUMS_PER_POINT), POINTS_NUM, NUMS_PER_POINT);
-    printf("\n");
-    maxDim = maxAbsVal(points, POINTS_NUM);
-    printf("%d, %d, %.4f\n", *maxDim, *(maxDim + 1), points[*maxDim][*(maxDim + 1)]);
-    free(maxDim);
-    printMat(buildJacobiRet(points, points, POINTS_NUM), POINTS_NUM + 1, POINTS_NUM);
+    if (points == NULL) {
+        printf("An error has accured\n");
+        return 0;
+    }
+    if (!strcmp(argv[1], "jacobi")) {mat = itterRots(points, POINTS_NUM);}
+    else {
+        mat = calcWeightedAdjencyMatrix(points, POINTS_NUM, NUMS_PER_POINT);
+        if (strcmp(argv[1], "wam")) {
+            helpMat = calcDiagonalDegreeMatrix(mat, POINTS_NUM);
+            if (!strcmp(argv[1], "gl")) {calcLaplasianMatrix(mat, helpMat, POINTS_NUM);}
+            if (mat != NULL) {freeMat(mat);}
+            mat = helpMat;
+        }
+    }
+    printMat(mat, POINTS_NUM + (strcmp(argv[1], "jacobi") ? 0:1), POINTS_NUM);
     freeMat(points);
+    if (mat != NULL) {freeMat(mat);}
+    else {return 0;}
     return 1;
 }
