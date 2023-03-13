@@ -1,9 +1,8 @@
 # include "spkmeans.h"
 
 int LINE_SIZE = 10;
-int NUMS_PER_POINT = 0;
-int POINTS_NUM = 0;
-int CLUSTERS_NUM = 0;
+int COLS = 0;
+int ROWS = 0;
 
 /***************************
  * File Processing Functions
@@ -23,13 +22,13 @@ double ** processFile(char *path) {
         fclose(file);
         return NULL;
     }
-    points = createMatrix(10, NUMS_PER_POINT);
+    points = createMat(10, COLS);
     if (points == NULL) {
         free(point);
         fclose(file);
         return NULL;
     }
-    copyDoublePFromTo(point, points[0], NUMS_PER_POINT);
+    copyDoublePFromTo(point, points[0], COLS);
     points = processPoints(points, file);
     free(point);
     fclose(file);
@@ -37,7 +36,7 @@ double ** processFile(char *path) {
 }
 
 /*
-Func processes the first line of the file to NUMS_PER_POINT and suspected LINE_SIZE.
+Func processes the first line of the file to COLS and suspected LINE_SIZE.
 param file: the pointer to the file object.
 return: double *point - the first point in the file.
 */
@@ -59,8 +58,9 @@ double * processFirstLine(FILE *file) {
     }
     *indp = 0;
     while (line[(*indp)] != '\0') {
-        point[NUMS_PER_POINT++] = processNum(line, indp);
-        if (size == NUMS_PER_POINT) {
+        point[COLS++] = processNum(line, indp);
+        if (MEM_ERR) {return NULL;}
+        if (size == COLS) {
             point = (double *) realloc(point, (size_t) ((size *= 2) * sizeof(double)));
             if (point == NULL) {
                 free(indp);
@@ -88,6 +88,7 @@ char * getLine(FILE *file) {
     line = (char *) malloc((size_t) (LINE_SIZE * sizeof(char)));
     if (line == NULL) {
         free(indp);
+        MEM_ERR = 1;
         return NULL;
     }
     pointer = fgets(line, LINE_SIZE, file);
@@ -101,6 +102,7 @@ char * getLine(FILE *file) {
         if (line == NULL) {
             free(pointer);
             free(indp);
+            MEM_ERR = 1;
             return NULL;
         }
         enterAfter(line + *indp, file);
@@ -136,17 +138,30 @@ return: the numerical value of a double given as a string.
 */
 double processNum(char *line, int *indp) {
     int size = 8, i = 0, start = *indp;
-    char *num_str = (char *) malloc((size_t) (size * sizeof(char)));
     double num;
-    /*if (num_str == NULL) {return NULL;}*/
-    while (line[*indp] != ',' && line[*indp] != '\n') {
-        num_str[i] = line[(*indp)++];
-        if (size == ++i) {num_str = (char *) realloc(num_str, (size_t) ((size *= 2) * sizeof(char)));}
+    char *numStr = (char *) malloc((size_t) (size * sizeof(char)));
+    if (numStr == NULL) {
+        MEM_ERR = 1;
+        return 0.0;
     }
-    num_str = (char *) realloc(num_str, (size_t) ((*indp - start + 1) * sizeof(char)));
-    num_str[*indp - start] = '\0';
-    num = atof(num_str);
-    free(num_str);
+    while (line[*indp] != ',' && line[*indp] != '\n') {
+        numStr[i] = line[(*indp)++];
+        if (size == ++i) {
+            numStr = (char *) realloc(numStr, (size_t) ((size *= 2) * sizeof(char)));
+            if (numStr == NULL) {
+                MEM_ERR = 1;
+                return 0.0;
+            }
+        }
+    }
+    numStr = (char *) realloc(numStr, (size_t) ((*indp - start + 1) * sizeof(char)));
+    if (numStr == NULL) {
+        MEM_ERR = 1;
+        return 0.0;
+    }
+    numStr[*indp - start] = '\0';
+    num = atof(numStr);
+    free(numStr);
     return num;
 }
 
@@ -161,18 +176,19 @@ double ** processPoints(double **points, FILE *file) {
     int length = 10;
     double *curPoint;
     while ((curPoint = processLine(file)) != NULL) {
-        if (POINTS_NUM++ == length - 1) {
-            points = doubleMatLength(points, length, NUMS_PER_POINT);
+        if (ROWS++ == length - 1) {
+            points = doubleMatLength(points, length, COLS);
             if (points == NULL) {
                 free(curPoint);
                 return NULL;
             }
             length *= 2;
         }
-        copyDoublePFromTo(curPoint, points[POINTS_NUM], NUMS_PER_POINT);
+        copyDoublePFromTo(curPoint, points[ROWS], COLS);
         free(curPoint);
     }
-    POINTS_NUM++;
+    ROWS++;
+    if (MEM_ERR) {return NULL;}
     return points;
 }
 
@@ -186,19 +202,21 @@ double * processLine(FILE *file) {
     int *indp, i = 0;
     char *line = getLine(file);
     if (line == NULL) {return NULL;}
-    point = (double *) malloc((size_t) (NUMS_PER_POINT * sizeof(double)));
+    point = (double *) malloc((size_t) (COLS * sizeof(double)));
     if (point == NULL) {
         free(line);
+        MEM_ERR = 1;
         return NULL;
     }
     indp = (int *) malloc(sizeof(int));
     if (indp == NULL) {
         free(line);
         free(point);
+        MEM_ERR = 1;
         return NULL;
     }
     *indp = 0;
-    for (; i < NUMS_PER_POINT; i++) {
+    for (; i < COLS; i++) {
         point[i] = processNum(line, indp);
         (*indp)++;
     }
@@ -222,17 +240,17 @@ int main(int argc, char *argv[]) {
         printf("An error has accured\n");
         return 0;
     }
-    if (!strcmp(argv[1], "jacobi")) {mat = itterRots(points, POINTS_NUM);}
+    if (!strcmp(argv[1], "jacobi")) {mat = itterRots(points, ROWS);}
     else {
-        mat = calcWeightedAdjencyMatrix(points, POINTS_NUM, NUMS_PER_POINT);
+        mat = calcWeightedAdjencyMatrix(points, ROWS, COLS);
         if (strcmp(argv[1], "wam")) {
-            helpMat = calcDiagonalDegreeMatrix(mat, POINTS_NUM);
-            if (!strcmp(argv[1], "gl")) {calcLaplasianMatrix(mat, helpMat, POINTS_NUM);}
+            helpMat = calcDiagonalDegreeMatrix(mat, ROWS);
+            if (!strcmp(argv[1], "gl")) {calcLaplasianMatrix(mat, helpMat, ROWS);}
             if (mat != NULL) {freeMat(mat);}
             mat = helpMat;
         }
     }
-    printMat(mat, POINTS_NUM + (strcmp(argv[1], "jacobi") ? 0:1), POINTS_NUM);
+    printMat(mat, ROWS + (strcmp(argv[1], "jacobi") ? 0:1), ROWS);
     freeMat(points);
     if (mat != NULL) {freeMat(mat);}
     else {return 0;}

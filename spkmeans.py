@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import math
 import sys
-import spkmeansmodule as cmod
+import mykmeanssp as cmod
 
 """
 Func implements the k-means++ centroid initialization algorythem.
