@@ -17,7 +17,7 @@ double ** processFile(char *path) {
     double *point, **points;
     FILE *file = fopen(path, "r");
     if (file == NULL) {return NULL;}
-    point = processFirstLine(file); 
+    point = processFirstLine(file);
     if (point == NULL) {
         fclose(file);
         return NULL;
@@ -229,16 +229,17 @@ int main(int argc, char *argv[]) {
     double **points, **mat, **helpMat;
     if (argc != 3) {
         printf("The arguments given don't match the requierments!\n");
-        return 0;
+        return 1;
     }
     if (strcmp(argv[1], "jacobi") && strcmp(argv[1], "wam") && strcmp(argv[1], "ddg") && strcmp(argv[1], "gl")) {
         printf("Invalid goal!\n");
-        return 0;
+        return 1;
     }
     points = processFile(argv[2]);
+    printf("Processed File\n");
     if (points == NULL) {
         printf("An error has accured\n");
-        return 0;
+        return 1;
     }
     if (!strcmp(argv[1], "jacobi")) {mat = itterRots(points, ROWS);}
     else {
@@ -253,6 +254,6 @@ int main(int argc, char *argv[]) {
     printMat(mat, ROWS + (strcmp(argv[1], "jacobi") ? 0:1), ROWS);
     freeMat(points);
     if (mat != NULL) {freeMat(mat);}
-    else {return 0;}
-    return 1;
+    else {return 1;}
+    return 0;
 }

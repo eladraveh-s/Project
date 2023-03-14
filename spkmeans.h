@@ -286,28 +286,34 @@ double ** itterRots(double **mat, int dim) {
     int *maxDim, exCode;
     double **rotated, **curRot, **prev, **product = idMat(dim);
     if (product == NULL) {return NULL;}
-    prev = idMat(dim);
+    prev = createMat(dim, dim);
     if (prev == NULL) {
         freeMat(product);
         return NULL;
     }
-    rotated = mat;
+    rotated = createMat(dim, dim);
+    if (rotated == NULL) {
+        freeMat(product);
+        freeMat(prev);
+        return NULL;
+    }
+    copyMatFromTo(mat, rotated, dim, dim);
     exCode = 0;
     do {
         freeMat(prev);
         prev = rotated;
-        maxDim = maxAbsVal(mat, dim);
+        maxDim = maxAbsVal(prev, dim);
         if (maxDim == NULL) {
             exCode = 1;
             break;
         }
         if (mat[*maxDim][*(maxDim + 1)] == 0) {break;}
-        curRot = createRotMat(mat, dim, *maxDim, *(maxDim + 1));
+        curRot = createRotMat(prev, dim, *maxDim, *(maxDim + 1));
         if (curRot == NULL) {
             exCode = 2;
             break;
         }
-        rotated = mulSqMats(mat, curRot, dim);
+        rotated = mulSqMats(prev, curRot, dim);
         if (rotated == NULL) {
             exCode = 3;
             break;
@@ -323,7 +329,7 @@ double ** itterRots(double **mat, int dim) {
     if (exCode != 2 && exCode != 0) {freeMat(curRot);}
     if (exCode == 3) {freeMat(product);}
     if (exCode == 4) {freeMat(rotated);}
-    if (exCode == 2 || exCode == 1) {free(prev);}
+    if (exCode < 3) {free(prev);}
     if (exCode != 0) {return NULL;}
     return buildJacobiRet(rotated, product, dim);
 }
@@ -365,9 +371,8 @@ double ** createRotMat(double **mat, int dim, int maxRow, int maxCol) {
     rot = idMat(dim);
     if (rot == NULL) {return NULL;}
     rot[maxRow][maxRow] = rot[maxCol][maxCol] = c;
-    rot[maxRow][maxCol] = rot[maxCol][maxRow] = s;
-    if (maxRow < maxCol) {rot[maxCol][maxRow] *= -1;}
-    else {rot[maxRow][maxCol] *= -1;}
+    rot[maxRow][maxCol] = s;
+    rot[maxCol][maxRow] = -s;
     return rot;
 }
 
@@ -418,13 +423,14 @@ return: the index of the gap + 1.
 int eigenHur(double *row, int length) {
     double curGap, maxGap = 0;
     int maxInd = 0, i = 0;
-    for (; i < (length - 1) / 2; i++) {
+    for (; i < length / 2; i++) {
         curGap = fabs(row[i] - row[i + 1]);
         if (maxGap < curGap) {
             maxInd = i;
             maxGap = curGap;
         }
     }
+    printf("\n");
     return maxInd + 1;
 }
 
@@ -460,7 +466,7 @@ double ** calcWeightedAdjencyMatrix(double ** dataPoints, int n ,int d) {
 double findTheDegreeOfaVertex(double * vertexRow, int n) {
     int i = 0;
     double degree = 0.0;
-    for (; i < n; i++) {degree = degree + vertexRow[i];}
+    for (; i < n; i++) {degree += vertexRow[i];}
     return degree;
 }
 

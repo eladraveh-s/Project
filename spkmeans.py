@@ -8,8 +8,9 @@ import mykmeanssp as cmod
 Func implements the k-means++ centroid initialization algorythem.
 @param k: The ammount of centroids to be chosen.
 @param points: A matrix containing all of the points and their indices.
+@returns: The chosen centroids.
 """
-def choose_centroids(k: int, points: np.ndarray) -> np.ndarray: #will be changed
+def choose_centroids(k: int, points: np.ndarray) -> list:
     centroids = np.ndarray(shape = (k, len(points[0])))
     selected = np.random.choice(len(points))
     centroids[0] = points[selected]
@@ -18,7 +19,7 @@ def choose_centroids(k: int, points: np.ndarray) -> np.ndarray: #will be changed
     for i in range(1, k):
         if i < k:
             update_min_dists(points, centroids[i - 1], min_dists, i == 1)
-        selected = np.random.choice(np.asarray([i for i in range(len(points))]), p = calc_prob(min_dists))
+        selected = int(np.random.choice(np.asarray([i for i in range(len(points))]), p = calc_prob(min_dists)))
         centroids[i] = points[selected]
         points = np.delete(points, selected, axis = 0)
         min_dists = np.delete(min_dists, selected)
@@ -33,10 +34,8 @@ Func updates the minimum distance from the centroids after intializing a new cen
 """
 def update_min_dists(points: np.ndarray, new_centroid: np.ndarray, min_dists: np.ndarray, first: bool) -> None:
     for i in range(len(points)):
-        if first:
-             min_dists[i] = distance(points[i], new_centroid)
-        else:    
-            min_dists[i] = min(min_dists[i], distance(points[i], new_centroid))
+        min_dists[i] = distance(points[i], new_centroid) if first else min(
+            min_dists[i], distance(points[i], new_centroid))
 
 """
 Func computes the distance between 2 data points, ignoring the first (index) coloumn.
@@ -59,10 +58,18 @@ def calc_prob(min_dists: np.ndarray) -> np.ndarray:
         probs[i] /= sum_min_dists
     return probs
 
+"""
+Func prints a matrix (list of lists).
+@param points: A list of lists of numbers.
+"""
 def print_mat(points: list) -> None:
     for point in points:
         print_line(point)
 
+"""
+Func prints a list of numbers.
+@param points: A list  of numbers.
+"""
 def print_line(point: list) -> None:
     line = ""
     for cor in point:
@@ -73,11 +80,19 @@ def print_line(point: list) -> None:
         line += ','
     print(line[:-1])
     
-def main(k: int, goal: str, path: str, hur: bool): #will be changed
-    points = pd.read_csv(path, header = None).to_numpy()
+def main(k: int, goal: str, path: str, hur: bool):
+    points = pd.read_csv(path, header = None).values.tolist()
     if goal == "spk":
         np.random.seed(0)
-        output = cmod.spk()
+        points = cmod.mat4spk(points, k)
+        for ind in range(len(points)):
+            points[ind] = [ind] + points[ind]
+        centroids, indices = [], []
+        for cent in choose_centroids(len(points[0]) - 1, np.array([np.array(point) for point in points])):
+            indices.append(int(cent[0]))
+            centroids.append(cent.tolist()[1:])
+        output = cmod.spk([point[1:] for point in points], centroids)
+        print_line(indices)
     elif goal == "wam":
         output = cmod.wam(points)
     elif goal == "ddg":
@@ -86,17 +101,18 @@ def main(k: int, goal: str, path: str, hur: bool): #will be changed
         output = cmod.gl(points)
     else:
         output = cmod.jacobi(points)
+    print_mat(output)
 
 
 if __name__ == "__main__":
     goals = ["spk", "wam", "ddg", "gl", "jacobi"]
     argv_len = len(sys.argv)
     if argv_len < 3 or argv_len > 4:
-        print("Invalid input")
+        print("Invalid input!")
     elif argv_len == 4:
         if sys.argv[1].isdecimal():
-            if sys.argv[2] not in goals:
-                print("Invalid goal!")
+            if sys.argv[2] != "spk":
+                print("Invalid input!")
             else:
                 main(int(sys.argv[1]), sys.argv[2], sys.argv[3], True)
         else:
