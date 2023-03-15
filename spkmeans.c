@@ -236,24 +236,36 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     points = processFile(argv[2]);
-    printf("Processed File\n");
     if (points == NULL) {
         printf("An error has accured\n");
         return 1;
     }
-    if (!strcmp(argv[1], "jacobi")) {mat = itterRots(points, ROWS);}
+    if (!strcmp(argv[1], "jacobi")) {
+        mat = itterRots(points, ROWS);
+        if (mat == NULL) {
+            printf("An error has accured\n");
+            return 1;
+        }
+    }
     else {
         mat = calcWeightedAdjencyMatrix(points, ROWS, COLS);
+        if (mat == NULL) {
+            printf("An error has accured\n");
+            return 1;
+        }
         if (strcmp(argv[1], "wam")) {
             helpMat = calcDiagonalDegreeMatrix(mat, ROWS);
+            if (helpMat == NULL) {
+                printf("An error has accured\n");
+                return 1;
+            }
             if (!strcmp(argv[1], "gl")) {calcLaplasianMatrix(mat, helpMat, ROWS);}
-            if (mat != NULL) {freeMat(mat);}
+            freeMat(mat);
             mat = helpMat;
         }
     }
     printMat(mat, ROWS + (strcmp(argv[1], "jacobi") ? 0:1), ROWS);
     freeMat(points);
-    if (mat != NULL) {freeMat(mat);}
-    else {return 1;}
+    freeMat(mat);
     return 0;
 }

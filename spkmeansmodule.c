@@ -143,7 +143,14 @@ PyObject * getTheWantedMatrix(PyObject *self, PyObject *args, int mode) {
         return NULL;
     }
 
-    if (mode == 1) {return convertMatrixToPy(itterRots(dataPoints, n), n + 1, n);}
+    if (mode == 1) {
+        weightedMatrix = itterRots(dataPoints, n);
+        if (weightedMatrix == NULL) {
+            PyErr_SetString(PyExc_RuntimeError, "An error has accured.");
+            return NULL;
+        }
+        return convertMatrixToPy(weightedMatrix, n + 1, n);
+    }
     weightedMatrix = calcWeightedAdjencyMatrix(dataPoints, n , d);
     if (weightedMatrix == NULL) {
         PyErr_SetString(PyExc_RuntimeError, "An error has accured.");
