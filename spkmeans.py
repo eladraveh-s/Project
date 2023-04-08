@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import math
 import sys
+import os
 import mykmeanssp as cmod
 
 """
@@ -81,6 +82,9 @@ def print_line(point: list) -> None:
     print(line[:-1])
     
 def main(k: int, goal: str, path: str, hur: bool):
+    if os.stat(path).st_size == 0:
+        print('An Error Has Occurred')
+        return
     points = pd.read_csv(path, header = None).values.tolist()
     if goal == "spk":
         np.random.seed(0)
