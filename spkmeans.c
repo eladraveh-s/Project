@@ -228,35 +228,35 @@ double * processLine(FILE *file) {
 int main(int argc, char *argv[]) {
     double **points, **mat, **helpMat;
     if (argc != 3) {
-        printf("The arguments given don't match the requierments!\n");
+        printf("An Error Has Occurred (The arguments given don't match the requierments!)\n");
         return 1;
     }
     if (strcmp(argv[1], "jacobi") && strcmp(argv[1], "wam") && strcmp(argv[1], "ddg") && strcmp(argv[1], "gl")) {
-        printf("Invalid goal!\n");
+        printf("An Error Has Occurred (Invalid goal!)\n");
         return 1;
     }
     points = processFile(argv[2]);
     if (points == NULL) {
-        printf("An error has accured\n");
+        printf("An Error Has Occurred\n");
         return 1;
     }
     if (!strcmp(argv[1], "jacobi")) {
         mat = itterRots(points, ROWS);
         if (mat == NULL) {
-            printf("An error has accured\n");
+            printf("An Error Has Occurred\n");
             return 1;
         }
     }
     else {
         mat = calcWeightedAdjencyMatrix(points, ROWS, COLS);
         if (mat == NULL) {
-            printf("An error has accured\n");
+            printf("An Error Has Occurred\n");
             return 1;
         }
         if (strcmp(argv[1], "wam")) {
             helpMat = calcDiagonalDegreeMatrix(mat, ROWS);
             if (helpMat == NULL) {
-                printf("An error has accured\n");
+                printf("An Error Has Occurred\n");
                 return 1;
             }
             if (!strcmp(argv[1], "gl")) {calcLaplasianMatrix(mat, helpMat, ROWS);}
