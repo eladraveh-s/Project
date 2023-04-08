@@ -171,17 +171,23 @@ PyObject * getTheWantedMatrix(PyObject *self, PyObject *args, int mode) {
         return NULL;
     }
     if (mode == 5) {
-        diagonalMatrix = itterRots(diagonalMatrix, n);
+        freeMat(weightedMatrix);
+        weightedMatrix = itterRots(diagonalMatrix, n);
+        freeMat(diagonalMatrix);
+        if (weightedMatrix == NULL) {
+            PyErr_SetString(PyExc_RuntimeError, "An error has accured.");
+            return NULL;
+        }
+        diagonalMatrix = sortMat(weightedMatrix, n + 1, n);
         if (diagonalMatrix == NULL) {
             freeMat(weightedMatrix);
-            freeMat(diagonalMatrix);
             PyErr_SetString(PyExc_RuntimeError, "An error has accured.");
             return NULL;
         }
         if (!k) {k = eigenHur(diagonalMatrix[0], n);}
     }
     freeMat(weightedMatrix);
-    return convertMatrixToPy(diagonalMatrix, n, mode == 5 ? k:n);
+    return convertMatrixToPy(diagonalMatrix, n + (mode == 5 ? 1:0), mode == 5 ? k:n);
 }
 
 static PyObject * spk(PyObject *self, PyObject *args) {
@@ -210,7 +216,6 @@ static PyObject * spk(PyObject *self, PyObject *args) {
         free(points);
         return NULL;
     }
-
     if (itterPoints(clusters, points)) {return convertMatrixToPy(clusters, CLUSTERS_NUM, COLS);}
     else {return NULL;}
 }

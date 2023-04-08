@@ -20,7 +20,7 @@ void divideMat(double **, int, int, int *);
 double ** transposeMat(double **, int, int);
 double ** sortMat(double **, int, int);
 double ** idMat(int);
-void subtractMatrix(double **, double **, int n);
+void subtractMatrix(double **, double **, int);
 double ** mulSqMats(double **, double **, int);
 void printMat(double **, int, int);
 void freeMat(double **);
@@ -220,10 +220,11 @@ void subtractMatrix(double ** mat1, double ** mat2, int n) {
 Func implements matrix multiplication for two square matrices - A x B = P.
 param mat1: the left matrix in the multiplication process (A).
 param mat2: the right matrix in the multiplication process (B).
-return: the product of the multiplication process (P).
+param dim: The number of rows and columns in the matrices.
+return: The matrix P as listed above.
 */
 double ** mulSqMats(double **mat1, double **mat2, int dim) {
-    int i = 0, j, cur;
+    int j, cur, i = 0;
     double **prod = createMat(dim, dim);
     if (prod == NULL) {return NULL;}
     zeroMat(prod, dim, dim);
@@ -270,8 +271,8 @@ param dim: the dimension of the matrix.
 return: The first line is the eigen values, from there on it's the product of the rotation matrices.
 */
 double ** itterRots(double **mat, int dim) {
-    int *maxDim, exCode;
-    double **rotated, **curRot, **tRot, **prev, **product = idMat(dim);
+    int *maxDim;
+    double **rotated, **halfRot, **curRot, **tRot, **prev, **curProd, **product = idMat(dim);
     if (product == NULL) {return NULL;}
     prev = createMat(dim, dim);
     if (prev == NULL) {
@@ -285,52 +286,62 @@ double ** itterRots(double **mat, int dim) {
         return NULL;
     }
     copyMatFromTo(mat, rotated, dim, dim);
-    exCode = 0;
     do {
-        freeMat(prev);
-        prev = rotated;
+        copyMatFromTo(rotated, prev, dim, dim);
+        freeMat(rotated);
         maxDim = maxAbsVal(prev, dim);
         if (maxDim == NULL) {
-            exCode = 1;
-            break;
+            freeMat(prev);
+            freeMat(product);
+            return NULL;
         }
         if (mat[maxDim[0]][maxDim[1]] == 0) {break;}
         curRot = createRotMat(prev, dim, maxDim[0], maxDim[1]);
+        free(maxDim);
         if (curRot == NULL) {
-            exCode = 2;
-            break;
+            freeMat(prev);
+            freeMat(product);
+            return NULL;
         }
         tRot = transposeMat(curRot, dim, dim);
-        if (curRot == NULL) {
-            exCode = 3;
-            break;
+        if (tRot == NULL) {
+            freeMat(curRot);
+            freeMat(prev);
+            freeMat(product);
+            return NULL;
         }
-        rotated = mulSqMats(prev, curRot, dim);
-        if (rotated == NULL) {
-            exCode = 4;
-            break;
-        }
-        rotated = mulSqMats(tRot, rotated, dim);
-        if (rotated == NULL) {
-            exCode = 4;
-            break;
-        }
-        product = mulSqMats(product, curRot, dim);
-        if (product == NULL) {
-            exCode = 5;
-            break;
-        }
-        freeMat(curRot);
+        halfRot = mulSqMats(tRot, prev, dim);
         freeMat(tRot);
+        if (halfRot == NULL) {
+            freeMat(curRot);
+            freeMat(prev);
+            freeMat(product);
+            return NULL;
+        }
+        rotated = mulSqMats(halfRot, curRot, dim);
+        freeMat(halfRot);
+        if (rotated == NULL) {
+            freeMat(curRot);
+            freeMat(prev);
+            freeMat(product);
+            return NULL;
+        }
+        curProd = mulSqMats(product, curRot, dim);
+        freeMat(curRot);
+        if (curProd == NULL) {
+            freeMat(prev);
+            freeMat(rotated);
+            freeMat(product);
+            return NULL;
+        }
+        copyMatFromTo(curProd, product, dim, dim);
+        freeMat(curProd);
     } while (--MAX_R_ITTER > 0 && !didRotConverge(prev, rotated, dim));
-    if (exCode != 1) {free(maxDim);}
-    if (!(exCode == 2 || exCode == 0)) {freeMat(curRot);}
-    if (!(exCode == 3 || exCode == 0)) {freeMat(curRot);}
-    if (exCode == 4) {freeMat(product);}
-    if (exCode == 5) {freeMat(rotated);}
-    if (exCode < 4) {free(prev);}
-    if (exCode != 0) {return NULL;}
-    return buildJacobiRet(rotated, product, dim);
+    freeMat(prev);
+    prev = buildJacobiRet(rotated, product, dim);
+    freeMat(rotated);
+    freeMat(product);
+    return prev;
 }
 
 /*
@@ -340,8 +351,9 @@ param dim: the dimension of the matrix.
 return: the row and column of the element.
 */
 int * maxAbsVal(double **mat, int dim) {
-    int i = 0, j;
+    int j, i = 0;
     int *maxDim = (int *) calloc((size_t) 2, sizeof(int));
+    maxDim[1] = 1;
     if (maxDim == NULL) {return NULL;}
     for (; i < dim; i++) {
         for (j = 0; j < dim; j++) {
@@ -422,14 +434,13 @@ return: the index of the gap + 1.
 int eigenHur(double *row, int length) {
     double curGap, maxGap = 0;
     int maxInd = 0, i = 0;
-    for (; i < ((length - 1) / 2) + 1; i++) {
+    for (; i < (length - (length % 2 == 0 ? 0:1)) / 2; i++) {
         curGap = fabs(row[i] - row[i + 1]);
         if (maxGap < curGap) {
             maxInd = i;
             maxGap = curGap;
         }
     }
-    printf("\n");
     return maxInd + 1;
 }
 

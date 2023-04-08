@@ -84,15 +84,14 @@ def main(k: int, goal: str, path: str, hur: bool):
     points = pd.read_csv(path, header = None).values.tolist()
     if goal == "spk":
         np.random.seed(0)
-        points = cmod.mat4spk(points, k)
+        points = cmod.mat4spk(points, k)[1:]
         for ind in range(len(points)):
             points[ind] = [ind] + points[ind]
         centroids, indices = [], []
         for cent in choose_centroids(len(points[0]) - 1, np.array([np.array(point) for point in points])):
             indices.append(int(cent[0]))
             centroids.append(cent.tolist()[1:])
-        output = cmod.spk([point[1:] for point in points], centroids)
-        print_line(indices)
+        output = [indices] + cmod.spk([point[1:] for point in points], centroids)
     elif goal == "wam":
         output = cmod.wam(points)
     elif goal == "ddg":
