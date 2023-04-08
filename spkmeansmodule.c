@@ -129,7 +129,7 @@ PyObject * getTheWantedMatrix(PyObject *self, PyObject *args, int mode) {
     if (mode == 5) {if (!PyArg_ParseTuple(args, "Oi" ,&dataPointsInput, &k)) {return NULL;}}
     else {if (!PyArg_ParseTuple(args, "O" ,&dataPointsInput)) {return NULL;}}
     if (!PyList_CheckExact(dataPointsInput)) {
-        PyErr_SetString(PyExc_RuntimeError, "Received non-list type object.");
+        PyErr_SetString(PyExc_RuntimeError, "An Error Has Occurred (Received non-list type object)");
         return NULL;
     }
 
@@ -139,21 +139,21 @@ PyObject * getTheWantedMatrix(PyObject *self, PyObject *args, int mode) {
 
     dataPoints = convertMatrixToC(dataPointsInput, n, d);
     if (dataPoints == NULL) {
-        PyErr_SetString(PyExc_RuntimeError, "An error has accured.");
+        PyErr_SetString(PyExc_RuntimeError, "An Error Has Occurred");
         return NULL;
     }
 
     if (mode == 1) {
         weightedMatrix = itterRots(dataPoints, n);
         if (weightedMatrix == NULL) {
-            PyErr_SetString(PyExc_RuntimeError, "An error has accured.");
+            PyErr_SetString(PyExc_RuntimeError, "An Error Has Occurred");
             return NULL;
         }
         return convertMatrixToPy(weightedMatrix, n + 1, n);
     }
     weightedMatrix = calcWeightedAdjencyMatrix(dataPoints, n , d);
     if (weightedMatrix == NULL) {
-        PyErr_SetString(PyExc_RuntimeError, "An error has accured.");
+        PyErr_SetString(PyExc_RuntimeError, "An Error Has Occurred");
         return NULL;
     }
     freeMat(dataPoints);
@@ -161,7 +161,7 @@ PyObject * getTheWantedMatrix(PyObject *self, PyObject *args, int mode) {
     diagonalMatrix = calcDiagonalDegreeMatrix(weightedMatrix, n);
     if (diagonalMatrix == NULL) {
         freeMat(weightedMatrix);
-        PyErr_SetString(PyExc_RuntimeError, "An error has accured.");
+        PyErr_SetString(PyExc_RuntimeError, "An Error Has Occurred");
         return NULL;
     }
     if (mode > 3) {calcLaplasianMatrix(weightedMatrix, diagonalMatrix, n);}
@@ -175,13 +175,13 @@ PyObject * getTheWantedMatrix(PyObject *self, PyObject *args, int mode) {
         weightedMatrix = itterRots(diagonalMatrix, n);
         freeMat(diagonalMatrix);
         if (weightedMatrix == NULL) {
-            PyErr_SetString(PyExc_RuntimeError, "An error has accured.");
+            PyErr_SetString(PyExc_RuntimeError, "An Error Has Occurred");
             return NULL;
         }
         diagonalMatrix = sortMat(weightedMatrix, n + 1, n);
         if (diagonalMatrix == NULL) {
             freeMat(weightedMatrix);
-            PyErr_SetString(PyExc_RuntimeError, "An error has accured.");
+            PyErr_SetString(PyExc_RuntimeError, "An Error Has Occurred");
             return NULL;
         }
         if (!k) {k = eigenHur(diagonalMatrix[0], n);}
@@ -196,7 +196,7 @@ static PyObject * spk(PyObject *self, PyObject *args) {
 
     if(!PyArg_ParseTuple(args, "OO" ,&pointsInput, &clustersInput)) {return NULL;}
     if (!(PyList_CheckExact(pointsInput) && PyList_CheckExact(clustersInput))) {
-        PyErr_SetString(PyExc_RuntimeError, "Received non-list type object.");
+        PyErr_SetString(PyExc_RuntimeError, "An Error Has Occurred (Received non-list type object)");
         return NULL;
     }
 
@@ -207,12 +207,12 @@ static PyObject * spk(PyObject *self, PyObject *args) {
 
     points = convertMatrixToC(pointsInput, ROWS, COLS);
     if (points == NULL) {
-        PyErr_SetString(PyExc_RuntimeError, "An error has accured.");
+        PyErr_SetString(PyExc_RuntimeError, "An Error Has Occurred");
         return NULL;
     }
     clusters = convertMatrixToC(clustersInput, CLUSTERS_NUM, COLS);
     if (clusters == NULL) {
-        PyErr_SetString(PyExc_RuntimeError, "An error has accured.");
+        PyErr_SetString(PyExc_RuntimeError, "An Error Has Occurred");
         free(points);
         return NULL;
     }
