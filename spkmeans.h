@@ -353,6 +353,7 @@ return: the row and column of the element.
 int * maxAbsVal(double **mat, int dim) {
     int j, i = 0;
     int *maxDim = (int *) calloc((size_t) 2, sizeof(int));
+    if (dim == 1) {return maxDim;}
     maxDim[1] = 1;
     if (maxDim == NULL) {return NULL;}
     for (; i < dim; i++) {
@@ -417,11 +418,17 @@ param dim: the dimension of the matrices.
 return: the jacobi algorithm's wanted return value.
 */
 double ** buildJacobiRet(double **vals, double **vectors, int dim) {
-    int i = 0;
+    int j, i = 0;
     double **jacobi = createMat(dim + 1, dim);
+    char *str = (char *) calloc((size_t) 50, sizeof(char));
     if (jacobi == NULL) {return NULL;}
-    for (; i < dim; i++) {jacobi[0][i] = vals[i][i];}
     copyMatFromTo(vectors, jacobi + 1, dim ,dim);
+    for (; i < dim; i++) {
+        jacobi[0][i] = vals[i][i];
+        sprintf(str, "%.4f", jacobi[0][i]);
+        if (!strcmp(str, "-0.0000")) {for (j = 0; j < dim + 1; j++) {jacobi[i][j] *= -1;}}
+    }
+    free(str);
     return jacobi;
 }
 
